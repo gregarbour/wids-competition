@@ -7,7 +7,6 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.feature_selection import SelectFromModel
 
 from sklearn.preprocessing import scale
-from sklearn.pipeline import make_pipeline
 from sklearn.calibration import CalibratedClassifierCV
 
 from sklearn.metrics import log_loss, roc_auc_score
@@ -20,12 +19,11 @@ from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from xgboost import plot_importance
 
-import pickle
 from joblib import dump, load
 import os
 import time
 
-os.chdir('/Users/gregarbour/Desktop/Survey Paper/')
+os.chdir('/Users/gregarbour/Desktop/WiDS Competition/Data Files')
 df = pd.read_csv('training_original.csv')
 y = df['hospital_death']
 
@@ -38,6 +36,11 @@ del([df, train, test])
 
 train = pd.read_pickle('train_knn.pkl')
 test = pd.read_pickle('test_knn.pkl')
+
+train = train.drop(['hospital_admit_source_Observation',
+                    'hospital_admit_source_Other'], axis = 1)
+test = test.drop(['hospital_admit_source_Observation',
+                    'hospital_admit_source_Other'], axis = 1)
 
 # Standardize train and test sets
 train = scale(train)
@@ -82,6 +85,7 @@ rf_fit.cv_results_['mean_test_score']
 rf_fit.cv_results_['params']
 
 # Save results for later use
+os.chdir('/Users/gregarbour/Desktop/WiDS Competition/Model Files')
 dump(rf_fit, 'rf_fit.pkl')
 
 # Load results
@@ -177,7 +181,7 @@ print(classification_report(y_train, y_pred_class_rf))
 #### SVM with exhaustive grid search ####
 #########################################
 # Parameter grid to search
-param_grid_svm = {'C': [1, 10, 100, 1000], 'kernel': ['linear']}
+param_grid_svm = {'C': [0.1, 1], 'kernel': ['linear']}
 
 # Define the base model & Grid search method
 svc_grid = GridSearchCV(SVC(), 
@@ -337,47 +341,35 @@ print(classification_report(y_train, y_pred_class_xg))
 ######################################
 lr= SGDClassifier(loss = 'log', penalty = 'elasticnet')
 
-param_grid_lr = {'alpha': [10 ** -5, 10 ** -4, 10 ** -3, 10 ** -2, 0.1, 1, 10], 
+param_grid_lr = {'alpha': [10 ** -5, 10 ** -4, 10 ** -3, 10 ** -2, 0.1], 
                  'l1_ratio': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]}
 
-
+param_grid_lr = {'alpha': [0.1], 
+                 'l1_ratio': [0.4]}
 lr_grid = GridSearchCV(lr, 
                        param_grid_lr, 
                        cv=kf, 
                        scoring = 'roc_auc',
                        n_jobs = 4)
-lr_grid.fit(train, y_train)
+lr_fit = lr_grid.fit(train, y_train)
 
 
 #View results
-lr_grid.cv_results_['mean_test_score']
-lr_grid.cv_results_['params']
+lr_fit.cv_results_['mean_test_score']
+lr_fit.cv_results_['params']
 
 # Save results for later use
-# dump(rf_grid, 'rf_grid.pkl')
+dump(lr_fit, 'lr_fit.pkl')
 
 # Load results
-# rf_grid = load('rf_grid.pkl')
+# lr_fit = load('lr_fit.pkl')
 
-# summarize results
-print("Best: %f using %s" % (rf_grid.best_score_, rf_grid.best_params_))
-means_rf = rf_grid.cv_results_[ 'mean_test_score' ]
-stds_rf = rf_grid.cv_results_[ 'std_test_score' ]
-params_rf = rf_grid.cv_results_[ 'params' ]
-params_index = np.arange(1, 1 + len(params_rf))
-
-
+# Summarize results
+print("Best: %f using %s" % (lr_fit.best_score_, lr_fit.best_params_))
+means_lr = lr_fit.cv_results_[ 'mean_test_score' ]
+stds_lr = lr_fit.cv_results_[ 'std_test_score' ]
+params_lr = lr_fit.cv_results_[ 'params' ]
+params_index = np.arange(1, 1 + len(params_lr))
 
 
-pyplot.errorbar(params_index, means_rf, yerr=stds_rf)
-pyplot.title("Random Forest params vs AUC")
-pyplot.xlabel( 'param_index' )
-pyplot.ylabel( 'AUC' )
 
-#Predict on Train Set
-y_pred_prob_lr = lr.predict_proba(train)[:,1]
-roc_auc_score(y_true = y_train, y_score = y_pred_prob_lr)
-
-y_pred_class_lr = lr.predict(train)
-print(confusion_matrix(y_train, y_pred_class_rf))
-print(classification_report(y_train, y_pred_class_rf))

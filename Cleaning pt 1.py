@@ -6,7 +6,7 @@ import re
 import os
 import gc
 
-os.chdir('/Users/gregarbour/Desktop/Survey Paper/Code/Data Files')
+os.chdir('/Users/gregarbour/Desktop/WiDS Competition/Data Files')
 df = pd.read_csv('training_original.csv')
 y = df['hospital_death']
 
@@ -46,10 +46,10 @@ for i in range(21, 84):
 numeric_vars = df_all.columns[(df_all.dtypes == 'float64') | (df_all.dtypes == 'int64')]
 neg_sum = df_all[numeric_vars].apply(lambda x: sum(x < 0), axis = 0)  
 
-# vars have negative values: apache_4a_hospital_death_prob, apache_4a_icu_death_prob, pre_icu_los_days
-# train['apache_4a_hospital_death_prob'].hist()
-# train['apache_4a_icu_death_prob'].hist()
-# train['pre_icu_los_days'].hist(bins = 30)
+# vars that have negative values: apache_4a_hospital_death_prob, apache_4a_icu_death_prob, pre_icu_los_days
+train['apache_4a_hospital_death_prob'].hist()
+train['apache_4a_icu_death_prob'].hist()
+train['pre_icu_los_days'].hist(bins = 30)
 
 #Correct numeric vars with negative values to equal zero
 numeric_neg_vars = neg_sum[neg_sum > 0].index
@@ -64,6 +64,7 @@ for var in numeric_neg_vars:
 for i in range(21, 84):
     df_all[re.sub('max', 'min_max', df_all.columns[i*2])] = df_all.iloc[:, i*2] - df_all.iloc[:, i*2 + 1]
     
+#Export files to be used for exploratory plots in R
 train.to_csv('exploratory_df.csv')
 y_train.to_csv('y_train.csv')
 
@@ -73,11 +74,11 @@ y_train.to_csv('y_train.csv')
 ##### Bin certain variables #####
 #################################
 
-# train['apache_2_diagnosis'].value_counts(normalize = True) #Need to look up documentation for this var
-# train['apache_3j_diagnosis'].round().nunique() # Rounding reduces from 397 to 113 unique values
+train['apache_2_diagnosis'].value_counts(normalize = True) #Need to look up documentation for this var
+train['apache_3j_diagnosis'].round().nunique() # Rounding reduces from 397 to 113 unique values
 
-# df_all['apache_3j_diagnosis'].nunique()
-# df_all['apache_3j_diagnosis'].round().nunique() # Rounding reduces from 399 to 113 unique values for df_all
+df_all['apache_3j_diagnosis'].nunique()
+df_all['apache_3j_diagnosis'].round().nunique() # Rounding reduces from 399 to 113 unique values for df_all
 df_all['apache_3j_diagnosis'] = df_all['apache_3j_diagnosis'].round()
 
 
@@ -99,20 +100,20 @@ train = df_all.loc[df_all.is_train == 1]
 ##### Impute Missing Values #####
 #################################
 
-# ### Exploration of Missing Values ###
-# num_missing = train.isnull().sum()
-# num_missing = pd.DataFrame({'var_name': num_missing.index, 
-#                             'num_missing': num_missing, 
-#                             'percent_missing': num_missing/len(train.index)})
-# plt.hist(num_missing['percent_missing'])
+### Exploration of Missing Values ###
+num_missing = train.isnull().sum()
+num_missing = pd.DataFrame({'var_name': num_missing.index, 
+                            'num_missing': num_missing, 
+                            'percent_missing': num_missing/len(train.index)})
+plt.hist(num_missing['percent_missing'])
 
 # #Can also possibly remove ROWS that have a certain proportion of missingness
-# row_missing = train.apply(lambda x: sum(pd.isnull(x)), axis = 1)
+row_missing = train.apply(lambda x: sum(pd.isnull(x)), axis = 1)
 
-# #60,000 rows have missingness less than 0.5
-# plt.hist(row_missing/len(train.columns), bins = 20, cumulative = True)
-# plt.xlabel('Percentage of Missingness')
-# plt.title('Row Missingness')
+# 60,000 rows have missingness less than 0.5
+plt.hist(row_missing/len(train.columns), bins = 20, cumulative = True)
+plt.xlabel('Percentage of Missingness')
+plt.title('Row Missingness')
 # #But this is a bad idea! Missing values are very likely MNAR so the missingness means something!
 
 
@@ -142,16 +143,16 @@ for var in cat_vars_w_null_values:
 
 
 ### Binary Variables ###
-# bin_vars = pd.Series(['aids', 'apache_post_operative', 'arf_apache', 'cirrhosis', 'diabetes_mellitus', 'elective_surgery', 
-#                       'gcs_unable_apache', 'male', 'hepatic_failure', 'immunosuppression', 'intubated_apache', 'leukemia', 
-#                       'solid_tumor_with_metastasis', 'ventilated_apache'])
-# overlap = set(drop_vars).intersection(set(bin_vars))
+bin_vars = pd.Series(['aids', 'apache_post_operative', 'arf_apache', 'cirrhosis', 'diabetes_mellitus', 'elective_surgery', 
+                      'gcs_unable_apache', 'male', 'hepatic_failure', 'immunosuppression', 'intubated_apache', 'leukemia', 
+                      'solid_tumor_with_metastasis', 'ventilated_apache'])
+overlap = set(drop_vars).intersection(set(bin_vars))
 
 # Vector of binary variables AFTER removing those in drop_vars
 bin_vars = pd.Series(['apache_post_operative', 'diabetes_mellitus', 'elective_surgery', 
                       'male', 'intubated_apache','ventilated_apache'])
                      
-# Fix gender in train and df_all
+# Binarize gender in train and df_all
 train['gender'] = np.where(train['gender'] == 'M', 1, 0)
 train = train.rename(columns={"gender": "male"})
 
@@ -174,13 +175,13 @@ bin_vars_w_null_values = pd.Series(bin_na_sum[bin_na_sum.na_count > 0].index)
 ### Explore Remaining variables ###
 na_summary = train.isnull().sum()/train.shape[0]
 
-# plt.hist(na_summary, bins = 20, cumulative = True, normed = True)
-# plt.xlabel('Cumulative % of Missingness')
-# plt.title('Predictor Variable Missingness')
+plt.hist(na_summary, bins = 20, cumulative = True, normed = True)
+plt.xlabel('Cumulative % of Missingness')
+plt.title('Predictor Variable Missingness')
 
-# plt.hist(na_summary, bins = 20)
-# plt.xlabel('% of Missingness')
-# plt.title('Predictor Variable Missingness')
+plt.hist(na_summary, bins = 20)
+plt.xlabel('% of Missingness')
+plt.title('Predictor Variable Missingness')
 
 # Yikes! That's a ton of missing values. All of the variables with missingness > 0.5 are lab values. How these are handled
 # will have a huge impact on the model. XG Boost/LGM work with NA's, RF & LR (& NNs?) do not.
@@ -194,32 +195,29 @@ remaining_vars = set(df_all.columns).difference(pd.concat([bin_vars, cat_vars,
                                                            lab_vars, apache_vars], axis = 0))
 
 # What is the proportion of missing values among these vars?
-# lab_na_sum = train[lab_vars].isnull().sum()/train.shape[0]
-# lab_na_sum.hist(normalize = True)
-# plt.xlabel('Percent Missing')
-# plt.title("Missing of Lab Values")
+lab_na_sum = train[lab_vars].isnull().sum()/train.shape[0]
+lab_na_sum.hist(normalize = True)
+plt.xlabel('Percent Missing')
+plt.title("Missing of Lab Values")
 
-# apache_na_sum = train[apache_vars].isnull().sum()/train.shape[0]
-# apache_na_sum.hist(normalize = True)
-# plt.xlabel('Percent Missing')
-# plt.title("Missing of APACHE Values")
+apache_na_sum = train[apache_vars].isnull().sum()/train.shape[0]
+apache_na_sum.hist(normalize = True)
+plt.xlabel('Percent Missing')
+plt.title("Missing of APACHE Values")
 
-# remaining_na_sum = train[remaining_vars].isnull().sum()/train.shape[0]
-# remaining_na_sum.hist(normalize = True)
-# plt.xlabel('Percent Missing')
-# plt.title("Missing of APACHE Values")
+remaining_na_sum = train[remaining_vars].isnull().sum()/train.shape[0]
+remaining_na_sum.hist(normalize = True)
+plt.xlabel('Percent Missing')
+plt.title("Missing of APACHE Values")
 
-### Impute -9999 for missing lab and apache values
-# for var in lab_apache_vars:
-#     na_index = df_all[var].isnull()
-#     df_all[var][na_index] = -9999
+### Impute 0 for missing lab and apache values
 
 from sklearn.impute import SimpleImputer
-const_imputer = SimpleImputer(missing_values=np.nan, strategy='constant', fill_value = -9999)
+const_imputer = SimpleImputer(missing_values=np.nan, strategy='constant', fill_value = 0)
 const_imputer.fit(df_all[lab_apache_vars])
 df_all[lab_apache_vars] = const_imputer.transform(df_all[lab_apache_vars])
 
-### KNN imputation of Binary & Remaining variables
+### KNN imputation of Binary & remaining variables ()
 from sklearn.impute import KNNImputer
 knn_imputer = KNNImputer(n_neighbors=5)
 
@@ -238,7 +236,6 @@ test = df_all.loc[df_all['is_train']==0]
 df_all = pd.concat([train, test])
 
 # Impute the test set
-df_all_backup = df_all
 df_all = knn_imputer.fit_transform(df_all)
 df_all = pd.DataFrame(df_all, columns = train.columns)
 test = df_all.loc[df_all['is_train'] == 0].drop(['is_train'], axis=1)

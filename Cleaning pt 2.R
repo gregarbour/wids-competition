@@ -2,7 +2,7 @@ library(tidyverse)
 library(corrplot)
 library(caret)
 
-df <- read_csv("~/Desktop/Survey Paper/Code/Data Files/df_all_pt1.csv")
+df <- read_csv("~/Desktop/WiDS Competition/Code/Data Files/df_all_pt1.csv")
 df <- df %>% filter(is_train == 1) %>%  select(-X1, -index, -is_train)
 
 
@@ -42,7 +42,7 @@ drop_vars = bind_rows(data.frame(var_name = zero_names, type = 'zeroVar'),
                       data.frame(var_name = correlated_vars, 
                                  type = 'correlatedVar'))
 
-write.csv(drop_vars, file = '~/Desktop/Survey Paper/Code/Data Files/drop_vars.csv')
+write.csv(drop_vars, file = '~/Desktop/WiDS Competition/Code/Data Files/drop_vars.csv')
 
 
 
