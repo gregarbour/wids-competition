@@ -57,9 +57,9 @@ ggplot(na_sum, aes(x = percent_missing)) + geom_histogram() +
 #Missingness lab values vs rest of variables
 ggplot(na_sum, aes(x = percent_missing, fill = is_lab_var)) + 
   geom_histogram(position = 'stack', bins = 30) +
-  ggtitle('Missingness of Lab Value vs. Other Variables') +
+  ggtitle('Missingness of Lab/Vital Sign vs. Other Variables') +
   theme(plot.title = element_text(hjust = 0.5)) + 
-  ylab('Count') + xlab('% Missingness') + labs(fill = 'Lab Value')
+  ylab('Count') + xlab('% Missingness') + labs(fill = 'Lab/Vital Sign')
 
 na_sum2 <- na_sum %>% 
   filter(is_lab_var == 1) %>%
@@ -70,34 +70,84 @@ na_sum2 <- na_sum %>%
 na_sum2 %>%  
   ggplot(aes(x = percent_missing, y = percent_total)) + geom_point() +
   xlab('% Missing Values') + ylab('% of Total # of Variables') + 
-  ggtitle('Missingness of Lab Value Variables') +
+  ggtitle('Missingness of Lab/Vital Sign Variables') +
   theme(plot.title = element_text(hjust = 0.5))
-na_sum
 
+
+#Levels of Apache Bodysystem variable
+body <- as.data.frame(sort(table(df$apache_3j_bodysystem), decreasing = T))
+body %>% ggplot(aes(x = Var1, y = Freq)) + geom_col() +
+  xlab('') + ylab('Frequency') + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Effect of imputation on a ;ab value
+imputed <- data.frame(d1_hco3_min = df$d1_hco3_min, imputed = 'Original')
+imputed <- rbind(imputed,
+                 data.frame(d1_hco3_min = ifelse(is.na(df$d1_hco3_min), 0,
+                                                          df$d1_hco3_min),
+                            imputed = 'Zero Imputed'))
+
+imputed %>% ggplot(aes(x = d1_hco3_min)) + geom_histogram() + facet_wrap(~imputed) +
+  xlab('HCO3 Minimum') + ylab('Count')
+
+# Table1 for Aids variable
+aids <- data.frame(AIDS = factor(df$aids))
+table1(~ AIDS, data = aids)
 
 #### Random Forest Tuning & Evaluation ####
-params_rf1 <- read_csv("RF1 results.csv")
-params_rf2 <- read_csv("RF2 results.csv")
+rf <- read_csv("Model Files/All RF Results.csv")
+
+ggplot(rf, aes(x = max_depth, y = AUC)) + geom_point()
+
+ggplot(rf, aes(x = max_features, y = AUC, colour = factor(n_estimators))) + geom_point() +
+  labs(color = "Number of Estimators")
+
+ggplot(rf, aes(x = n_estimators, y = AUC, colour = factor(max_depth))) + geom_point() +
+  labs(color = "Max Depth") 
+
 
 # facet: (max_depth), x-axis: max_features, colour: n_estimators
-ggplot(params_rf1, aes(x = max_features, y = AUC, colour = factor(n_estimators))) + 
+ggplot(rf, aes(x = max_features, y = AUC, colour = factor(n_estimators))) + 
   geom_line() + 
   facet_grid(~max_depth) + 
   xlab("Maximum # of Features") +
-  labs(color = "Number of Estimators")
+  labs(color = "Number of Estimators") +
+  ggtitle('AUC of Random Forest Models by Max Depth') +
+  theme(plot.title = element_text(hjust = 0.5))
 
-# 2nd parameter set CV results
-ggplot(params_rf2, aes(x = max_features, y = AUC, colour = factor(n_estimators))) + 
-  geom_line() + 
-  facet_grid(~max_depth) + 
-  xlab("Maximum # of Features") +
-  labs(color = "Number of Estimators")
 
 # Showing error bar spread of AUC estimates from each candidate parameter set
-params_rf1 <- params_rf1 %>% arrange(AUC) %>% 
+rf1 <- rf %>% arrange(AUC) %>% 
   mutate(index = 1:n(),
          y_max = AUC + std_dev,
          y_min = AUC - std_dev)
 
-ggplot(params_rf1, aes(x = index, y = AUC)) + geom_point() +
-  geom_errorbar(data = params_rf1, mapping = aes(ymin = y_min, ymax = y_max))
+ggplot(rf1, aes(x = index, y = AUC)) + geom_point() +
+  geom_errorbar(data = rf1, mapping = aes(ymin = y_min, ymax = y_max)) +
+  xlab('Model Number')
+
+rf2 <- rf1 %>% filter(max_features == 100, n_estimators == 50, index != 57)
+
+ggplot(rf2, aes(x = max_depth, y = AUC)) + geom_point() +
+  geom_errorbar(data = rf2, mapping = aes(ymin = y_min, ymax = y_max)) +
+  xlab('Max Depth') +
+  ggtitle('Standard Errors of AUC by Max Depth (with fixed Max Features & Number of Estimators)') +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#Candidate models using the 'simplest model within 1 std error of the best' approach
+rf1 %>% filter(AUC > 0.8808738, index != 57) %>% 
+  ggplot(aes(x = max_features, y = AUC, colour = factor(n_estimators))) + 
+  geom_point() + 
+  facet_grid(~max_depth) +
+  labs(color = "Number of Estimators") + xlab('Number of Estimators') +
+  ggtitle('AUC of Random Forest Models by Max Depth') +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Feature Importance
+rf_imp <- read_csv("Desktop/WiDS Competition/Data Files/RF Importance.csv")
+xg_imp <- read_csv("Desktop/WiDS Competition/Data Files/XG Importance.csv")
+lr_imp <- read_csv("Desktop/WiDS Competition/Data Files/LR Importance.csv")
+
+hist(lr_imp$coefs)
+
+

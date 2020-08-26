@@ -41,10 +41,16 @@ train = train.drop(['hospital_admit_source_Observation',
                     'hospital_admit_source_Other'], axis = 1)
 test = test.drop(['hospital_admit_source_Observation',
                     'hospital_admit_source_Other'], axis = 1)
+var_names = train.columns
 
 # Standardize train and test sets
 train = scale(train)
 test = scale(test)
+
+#Change directory as most future objects will be saved here
+os.chdir('/Users/gregarbour/Desktop/WiDS Competition/Model Files')
+
+
 
 ##########################
 ### Create the k-folds ###
@@ -56,6 +62,11 @@ kf = RepeatedKFold(
     n_repeats=n_repeats, 
     random_state=32)
 
+kf2 = RepeatedKFold(
+    n_splits=4, 
+    n_repeats=n_repeats, 
+    random_state=32)
+
 
 
 ######################################################################
@@ -64,9 +75,9 @@ kf = RepeatedKFold(
 
 ### First model ###
 # Specify the 1st parameter grid to be used
-param_grid_rf = {'n_estimators':[8,10,12],
-                 'max_depth': [2, 4, 6, 8],
-                 'max_features': [15, 20, 30, 50, 100, 150]}
+param_grid_rf = {'n_estimators':[50, 100, 150],
+                 'max_depth': [2, 4],
+                 'max_features': [20, 50, 100]}
 
 rf_grid = GridSearchCV(RandomForestClassifier(), 
                          param_grid_rf, 
@@ -85,7 +96,6 @@ rf_fit.cv_results_['mean_test_score']
 rf_fit.cv_results_['params']
 
 # Save results for later use
-os.chdir('/Users/gregarbour/Desktop/WiDS Competition/Model Files')
 dump(rf_fit, 'rf_fit.pkl')
 
 # Load results
@@ -98,10 +108,10 @@ stds_rf = rf_fit.cv_results_[ 'std_test_score' ]
 params_rf = rf_fit.cv_results_[ 'params' ]
 
 # Create dataframe of CV results for plotting in R
-# params_rf = pd.DataFrame.from_dict(params_rf)
-# params_rf['AUC'] = means_rf
-# params_rf['std_dev'] = stds_rf
-# params_rf.to_csv('RF1 results.csv')
+params_rf = pd.DataFrame.from_dict(params_rf)
+params_rf['AUC'] = means_rf
+params_rf['std_dev'] = stds_rf
+params_rf.to_csv('RF1 results.csv')
 
 
 
@@ -116,7 +126,6 @@ rf_grid2 = GridSearchCV(RandomForestClassifier(),
                          cv=kf, 
                          scoring = 'roc_auc',
                          n_jobs = 4)
-
 
 #Fit the model(s)
 start_time = time.time()
@@ -141,19 +150,119 @@ stds_rf2 = rf_fit2.cv_results_[ 'std_test_score' ]
 params_rf2 = rf_fit2.cv_results_[ 'params' ]
 
 # Create dataframe of CV results for plotting in R
-# params_rf2 = pd.DataFrame.from_dict(params_rf2)
-# params_rf2['AUC'] = means_rf2
-# params_rf2['std_dev'] = stds_rf2
-# params_rf2.to_csv('RF2 results.csv')
+params_rf2 = pd.DataFrame.from_dict(params_rf2)
+params_rf2['AUC'] = means_rf2
+params_rf2['std_dev'] = stds_rf2
+params_rf2.to_csv('RF2 results.csv')
+
+
+
+### 3rd model ###
+# Expand the grid slightly to a different set of parameters in the same neighborhood as best solution
+param_grid_rf3 = {'n_estimators':[50],
+                 'max_depth': [8, 10],
+                 'max_features': [100]}
+
+rf_grid3 = GridSearchCV(RandomForestClassifier(), 
+                         param_grid_rf3, 
+                         cv=kf, 
+                         scoring = 'roc_auc',
+                         n_jobs = 4)
+
+
+#Fit the model(s)
+start_time = time.time()
+rf_fit3 = rf_grid3.fit(train, y_train)
+end_time = time.time()
+print("Elapsed time: ", end_time - start_time)
+
+#View results
+rf_fit3.cv_results_['mean_test_score']
+rf_fit3.cv_results_['params']
+
+# Save results for later use
+dump(rf_fit3, 'rf_fit3.pkl')
+
+# Load results
+# rf_fit3 = load('rf_fit3.pkl')
+
+# summarize results
+print("Best: %f using %s" % (rf_fit3.best_score_, rf_fit3.best_params_))
+means_rf3 = rf_fit3.cv_results_[ 'mean_test_score' ]
+stds_rf3 = rf_fit3.cv_results_[ 'std_test_score' ]
+params_rf3 = rf_fit3.cv_results_[ 'params' ]
+
+# Create dataframe of CV results for plotting in R
+params_rf3 = pd.DataFrame.from_dict(params_rf3)
+params_rf3['AUC'] = means_rf3
+params_rf3['std_dev'] = stds_rf3
+# params_rf3.to_csv('RF3 results.csv')
+
+
+
+### Fourth model ###
+# Specify the parameter grid to be used
+param_grid_rf4 = {'n_estimators':[50, 100, 150],
+                 'max_depth': [6, 10, 14],
+                 'max_features': [100, 150]}
+
+rf_grid4 = GridSearchCV(RandomForestClassifier(), 
+                         param_grid_rf4, 
+                         cv=kf, 
+                         scoring = 'roc_auc',
+                         n_jobs = 4)
+
+#Fit the model(s)
+start_time = time.time()
+rf_fit4 = rf_grid4.fit(train, y_train)
+end_time = time.time()
+print("Elapsed time: ", end_time - start_time)
+
+#View results
+rf_fit4.cv_results_['mean_test_score']
+rf_fit4.cv_results_['params']
+
+# Save results for later use
+os.chdir('/Users/gregarbour/Desktop/WiDS Competition/Model Files')
+dump(rf_fit4, 'rf_fit4.pkl')
+
+# Load results
+# rf_fit4 = load('rf_fit4.pkl')
+
+# summarize results
+print("Best: %f using %s" % (rf_fit4.best_score_, rf_fit4.best_params_))
+means_rf4 = rf_fit4.cv_results_[ 'mean_test_score' ]
+stds_rf4 = rf_fit4.cv_results_[ 'std_test_score' ]
+params_rf4 = rf_fit4.cv_results_[ 'params' ]
+
+# Create dataframe of CV results for plotting in R
+params_rf4 = pd.DataFrame.from_dict(params_rf4)
+params_rf4['AUC'] = means_rf4
+params_rf4['std_dev'] = stds_rf4
+# params_rf4.to_csv('RF4 results.csv')
+
+
+
+### Export CSV of summary of all models
+params_rf_all = pd.concat([params_rf, params_rf2, params_rf3, params_rf4])
+params_rf_all.to_csv('All RF Results.csv')
+
 
 
 ### Final Model ###
 # Refit model based on best parameters from grid search
-rf_final = RandomForestClassifier(max_depth = 8,
-                                  max_features = 100,
-                                  n_estimators = 12,
+rf_final = RandomForestClassifier(max_depth = 10,
+                                  max_features = 50,
+                                  n_estimators = 50,
                                   n_jobs = 4)
 rf_final.fit(train, y_train)
+
+#Save final model for later use
+dump(rf_final, 'rf_final.pkl')
+
+# Load results
+# rf_final = load('rf_final.pkl')
+
 
 #Predict on Train Set
 y_pred_prob_rf = rf_final.predict_proba(train)[:,1]
@@ -163,45 +272,39 @@ y_pred_class_rf = rf_final.predict(train)
 print(confusion_matrix(y_train, y_pred_class_rf))
 print(classification_report(y_train, y_pred_class_rf))
 
+#Feature importance
+rf_importance = pd.DataFrame(rf_final.feature_importances_)
+rf_importance['variable'] = var_names
+# Export to R to plot
+rf_importance.to_csv('/Users/gregarbour/Desktop/WiDS Competition/Data Files/RF Importance.csv')
 
-
-
-########################
-#### SVM Classifier ####
-########################
-# svm_model = SVC(gamma='auto', probability = True)
-# clf_svm = make_pipeline(StandardScaler(), svm_model)
-# clf_svm.fit(train, y_train)
-
-# y_pred_svm = clf_svm.predict_proba(train)[:,1]
-# roc_auc_score(y_true = y_train, y_score = y_pred_svm)
 
 
 #########################################
 #### SVM with exhaustive grid search ####
 #########################################
 # Parameter grid to search
-param_grid_svm = {'C': [0.1, 1], 'kernel': ['linear']}
+param_grid_svm2 = {'C': [0.1], 'kernel': ['linear']} #fit1 just used 0.001
 
 # Define the base model & Grid search method
-svc_grid = GridSearchCV(SVC(), 
-                    param_grid_svm, 
+svc_grid2 = GridSearchCV(SVC(), 
+                    param_grid_svm2, 
                     cv=kf, 
                     scoring = 'roc_auc',
                     n_jobs = 4)
 
 # Fit the models
 start_time = time.time()
-svc_fit = svc_grid.fit(train, y_train)
+svc_fit2 = svc_grid2.fit(train, y_train)
 end_time = time.time()
 print("Elapsed time: ", end_time - start_time)
 
 #View results
-svc_fit.cv_results_['mean_test_score']
-svc_fit.cv_results_['params']
+svc_fit2.cv_results_['mean_test_score']
+svc_fit2.cv_results_['params']
 
 # Save results for later use
-dump(svc_fit, 'svc_fit.pkl')
+dump(svc_fit2, 'svc_fit2.pkl')
 
 # Load results
 # svc_fit = load('svc_fit.pkl')
@@ -212,72 +315,18 @@ means_svc = svc_fit.cv_results_[ 'mean_test_score' ]
 stds_svc = svc_fit.cv_results_[ 'std_test_score' ]
 params_svc = svc_fit.cv_results_[ 'params' ]
 
-# Create dataframe of CV results for plotting in R
-# params_svc = pd.DataFrame.from_dict(params_svc)
-# params_svc['AUC'] = means_svc
-# params_svc['std_dev'] = stds_svc
-# params_svc.to_csv('SVC results.csv')
+
 
 ### Final Model ###
 # Refit model based on best parameters from grid search
-svc_final = RandomForestClassifier(max_depth = 8,
-                                  max_features = 100,
-                                  n_estimators = 12,
-                                  n_jobs = 4)
+svc_final = SVC(C = 0.01, kernel = 'linear', probability = True)
 svc_final.fit(train, y_train)
 
-#Predict on Train Set
-y_pred_prob_svc = svc_final.predict_proba(train)[:,1]
-roc_auc_score(y_true = y_train, y_score = y_pred_prob_svc)
+# Save results for later use
+dump(svc_final, 'svc_final.pkl')
 
-y_pred_class_svc = svc_final.predict(train)
-print(confusion_matrix(y_train, y_pred_class_svc))
-print(classification_report(y_train, y_pred_class_svc))
-
-
-
-##################################
-####      Base XG Boost       ####
-##################################
-
-xg = XGBClassifier(nthread = -1, 
-                   random_state = 0)
-eval_set = [(train, y_train)]
-xg.fit(train, y_train, verbose = True, eval_metric = 'auc', eval_set = eval_set)
-# Next step = to get verbose to work, need to also specify an eval set.
-# I.e. need k-fold CV and eval on each hold out fold
-
-
-
-# feature importance
-xg.booster().get_score(importance_type='gain') ### Doesn't work! Fix!
-
-# plot feature importance
-plot_importance(xg, max_num_features = 20)
-pyplot.show()
-
-thresholds = xg.feature_importances_
-thresholds.sort()
-thresholds = thresholds[thresholds > 0]
-for thresh in thresholds:
-  # select features using threshold
-  selection = SelectFromModel(xg, threshold=thresh, prefit=True)
-  select_X_train = selection.transform(train)
-  
-  # train model
-  selection_model = XGBClassifier()
-  selection_model.fit(select_X_train, y_train)
-  
-  # eval model
-  select_X_test = selection.transform(train)
-  predictions = selection_model.predict(select_X_test)
-  accuracy = accuracy_score(y_train, predictions)
-  print("Thresh=%.3f, n=%d, Accuracy: %.2f%%" % (thresh, select_X_train.shape[1],
-      accuracy*100.0))
-
-# Compare results from 1st and 2nd models
-probs1 = xg.predict_proba(train)[:,1]
-roc_auc_score(y_true = y_train, y_score = probs1)
+# Load results
+# svc_final = load('svc_final.pkl')
 
 
 
@@ -285,47 +334,106 @@ roc_auc_score(y_true = y_train, y_score = probs1)
 ####       XG Boost CV        ####
 ##################################
 
-# Define model and parameter grid
-xg = XGBClassifier()
+# Define model and first parameter grid
+xg1 = XGBClassifier()
 
-param_grid_xg = {'max_depth': [4, 6, 8, 10], 
-    'learning_rate': [0.01, 0.05, 0.1],
-    'objective': 'binary:logistic',
-    'subsample': [0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
-    'colsample_bytree': [0.4, 0.6, 0.8, 1],
+param_grid_xg1 = {'max_depth': [4, 8], 
+    'learning_rate': [0.01],
+    'objective': ['binary:logistic'],
+    'subsample': [0.5],
+    'colsample_bytree': [0.4, 0.6],
     'gamma': [0],
-    'eval_metric': 'auc'}
+    'eval_metric': ['auc']}
+
 
 #Fit the model using randomized grid search
-xg_grid = GridSearchCV(xg, param_grid_xg, scoring="roc_auc", n_jobs=-1, cv=kf)
-xg_fit = xg_grid.fit(train, y_train)
+xg_grid1 = GridSearchCV(xg, param_grid_xg1, scoring="roc_auc", n_jobs=-1, cv=kf2)
+start_time = time.time()
+xg_fit1 = xg_grid1.fit(train, y_train)
+end_time = time.time()
+print("Elapsed time: ", end_time - start_time)
 
 #View results
-xg_fit.cv_results_['mean_test_score']
-xg_fit.cv_results_['params']
+xg_fit1.cv_results_['mean_test_score']
+xg_fit1.cv_results_['params']
 
 # Save results for later use
-dump(xg_fit, 'xg_fit.pkl')
+dump(xg_fit1, 'xg_fit1.pkl')
 
 # Load results
-# xg_fit = load('xg_fit.pkl')
+# xg_fit1 = load('xg_fit1.pkl')
 
 # summarize results
-print("Best: %f using %s" % (xg_fit.best_score_, xg_fit.best_params_))
-means_xg = xg_fit.cv_results_[ 'mean_test_score' ]
-stds_xg = xg_fit.cv_results_[ 'std_test_score' ]
-params_xg = xg_fit.cv_results_[ 'params' ]
+print("Best: %f using %s" % (xg_fit1.best_score_, xg_fit1.best_params_))
+means_xg1 = xg_fit1.cv_results_[ 'mean_test_score' ]
+stds_xg1 = xg_fit1.cv_results_[ 'std_test_score' ]
+params_xg1 = xg_fit1.cv_results_[ 'params' ]
 
 # Create dataframe of CV results for plotting in R
-# params_xg = pd.DataFrame.from_dict(params_xg)
-# params_xg['AUC'] = means_xg
-# params_xg['std_dev'] = stds_xg
-# params_xg.to_csv('XG results.csv')
+# params_xg1 = pd.DataFrame.from_dict(params_xg1)
+# params_xg1['AUC'] = means_xg1
+# params_xg1['std_dev'] = stds_xg1
+# params_xg1.to_csv('XG1 results.csv')
 
-### Final Model ###
+
+
+
+# Define model and second parameter grid
+xg2 = XGBClassifier()
+
+param_grid_xg2 = {'max_depth': [4, 8, 12], 
+    'learning_rate': [0.05],
+    'objective': ['binary:logistic'],
+    'subsample': [0.5],
+    'colsample_bytree': [0.4, 0.6],
+    'gamma': [0],
+    'eval_metric': ['auc']}
+
+
+#Fit the model using randomized grid search
+xg_grid2 = GridSearchCV(xg, param_grid_xg2, scoring="roc_auc", n_jobs=-1, cv=kf2)
+start_time = time.time()
+xg_fit2 = xg_grid2.fit(train, y_train)
+end_time = time.time()
+print("Elapsed time: ", end_time - start_time)
+
+#View results
+xg_fit2.cv_results_['mean_test_score']
+xg_fit2.cv_results_['params']
+
+# Save results for later use
+dump(xg_fit2, 'xg_fit2.pkl')
+
+# Load results
+# xg_fit2 = load('xg_fit2.pkl')
+
+# summarize results
+print("Best: %f using %s" % (xg_fit2.best_score_, xg_fit2.best_params_))
+means_xg2 = xg_fit2.cv_results_[ 'mean_test_score' ]
+stds_xg2 = xg_fit2.cv_results_[ 'std_test_score' ]
+params_xg2 = xg_fit2.cv_results_[ 'params' ]
+
+
+### Final XGBoost Model ###
 # Refit model based on best parameters from grid search
-xg_final = XGBClassifier()
+xg_final = XGBClassifier(colsample_bytree = 0.6, 
+                         eval_metric = 'auc', 
+                         gamma = 0, 
+                         learning_rate = 0.05, 
+                         max_depth = 12, 
+                         objective = 'binary:logistic',
+                         subsample = 0.5)
+
 xg_final.fit(train, y_train)
+
+
+# Save Final Model for later use
+dump(xg_final, 'xg_final.pkl')
+
+# Load results
+xg_final = load('xg_final.pkl')
+
+
 
 #Predict on Train Set
 y_pred_prob_xg = xg_final.predict_proba(train)[:,1]
@@ -336,13 +444,20 @@ print(confusion_matrix(y_train, y_pred_class_xg))
 print(classification_report(y_train, y_pred_class_xg))
 
 
+#Feature importance
+xg_importance = pd.DataFrame(xg_final.feature_importances_)
+xg_importance['variable'] = var_names
+# Export to R to plot
+xg_importance.to_csv('/Users/gregarbour/Desktop/WiDS Competition/Data Files/XG Importance.csv')
+
+
 ######################################
 #### Elastic Logistic Regression  ####
 ######################################
 lr= SGDClassifier(loss = 'log', penalty = 'elasticnet')
 
-param_grid_lr = {'alpha': [10 ** -5, 10 ** -4, 10 ** -3, 10 ** -2, 0.1], 
-                 'l1_ratio': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]}
+param_grid_lr = {'alpha': [10 ** -5, 10 ** -4, 10 ** -3, 10 ** -2], 
+                 'l1_ratio': [0.2, 0.4, 0.6, 0.8]}
 
 param_grid_lr = {'alpha': [0.1], 
                  'l1_ratio': [0.4]}
@@ -372,4 +487,75 @@ params_lr = lr_fit.cv_results_[ 'params' ]
 params_index = np.arange(1, 1 + len(params_lr))
 
 
+### Final LR Model ###
+lr_final = SGDClassifier(loss = 'log', 
+                         penalty = 'elasticnet',
+                         alpha = 0.1,
+                         l1_ratio = 0.4)
+lr_final = lr_final.fit(train, y_train)
 
+# Save results for later use
+dump(lr_final, 'lr_final.pkl')
+
+# Load results
+lr_final = load('lr_final.pkl')
+
+
+#Feature importance
+lr_importance = pd.DataFrame(lr_final.coef_.T, columns = ['coefs'])
+lr_importance['variable'] = var_names
+# Export to R to plot
+lr_importance.to_csv('/Users/gregarbour/Desktop/WiDS Competition/Data Files/LR Importance.csv')
+
+
+#######################################
+##### -9999 Trained model results #####
+#######################################
+
+lr_fit_9999 = load('lr_fit_9999.pkl')
+rf_fit_9999 = load('rf_fit_9999.pkl')
+rf_fit2_9999 = load('rf_fit2_9999.pkl')
+print("Best: %f using %s" % (lr_fit_9999.best_score_, lr_fit_9999.best_params_))
+print("Best: %f using %s" % (rf_fit_9999.best_score_, rf_fit_9999.best_params_))
+print("Best: %f using %s" % (rf_fit2_9999.best_score_, rf_fit2_9999.best_params_))
+
+
+
+##################################
+####  Predict w Final Models  ####
+##################################
+
+# Predict Random Forest on Test Set
+rf_prob = rf_final.predict_proba(test)[:,1]
+roc_auc_score(y_true = y_test, y_score = rf_prob)
+
+rf_class = rf_final.predict(test)
+print(confusion_matrix(y_test, rf_class))
+print(classification_report(y_test, rf_class))
+
+# Predict XGBoost on Test Set
+xg_prob = xg_final.predict_proba(test)[:,1]
+roc_auc_score(y_true = y_test, y_score = xg_prob)
+
+xg_class = xg_final.predict(test)
+print(confusion_matrix(y_test, xg_class))
+
+# Predict SVC on Test Set
+svc_prob = svc_final.predict_proba(test)[:,1]
+roc_auc_score(y_true = y_test, y_score = svc_prob)
+
+svc_class = svc_final.predict(test)
+print(confusion_matrix(y_test, svc_class))
+
+# Predict LR on Test Set
+lr_prob = lr_final.predict_proba(test)[:,1]
+roc_auc_score(y_true = y_test, y_score = lr_prob)
+
+lr_class = lr_final.predict(test)
+print(confusion_matrix(y_test, lr_class))
+
+
+
+##################################
+####    Feature Importance    ####
+##################################

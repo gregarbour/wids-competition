@@ -2,12 +2,12 @@ library(tidyverse)
 library(corrplot)
 library(caret)
 
-df <- read_csv("~/Desktop/WiDS Competition/Code/Data Files/df_all_pt1.csv")
+df <- read_csv("~/Desktop/WiDS Competition/Data Files/df_all_pt1.csv")
 df <- df %>% filter(is_train == 1) %>%  select(-X1, -index, -is_train)
 
 
 #### Which variables are extremely skewed towards only one value
-zero_vars <- caret::nearZeroVar(df)
+zero_vars <- caret::nearZeroVar(df, )
 zero_names <- names(df)[zero_vars]
 #Remove the 35 suggested vars
 df <- select(df, -all_of(zero_names))

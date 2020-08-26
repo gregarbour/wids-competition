@@ -29,6 +29,7 @@ test['is_train'] = 0
 df_all = pd.concat([train, test], axis = 0)
  
 
+
 #################################
 #####     Logic Checks      #####
 #################################
@@ -94,6 +95,7 @@ drop_vars = pd.read_csv('drop_vars.csv')
 drop_vars = pd.Series(drop_vars['var_name'].unique())
 df_all = df_all.drop(drop_vars, axis = 1)
 train = df_all.loc[df_all.is_train == 1]
+
 
 
 #################################
@@ -220,6 +222,7 @@ df_all[lab_apache_vars] = const_imputer.transform(df_all[lab_apache_vars])
 ### KNN imputation of Binary & remaining variables ()
 from sklearn.impute import KNNImputer
 knn_imputer = KNNImputer(n_neighbors=5)
+
 
 ### One hot encode categorical variables ###
 df_all = pd.get_dummies(df_all, dummy_na=True, columns=cat_vars)
